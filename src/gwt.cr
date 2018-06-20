@@ -55,7 +55,7 @@ module GWT
   def self.branch(branch_name)
     target_dir = "#{root_dir}/#{branch_name}"
 
-    command("git", ["worktree", "add", "-b", branch_name, target_dir])
+    command("git", ["worktree", "add", "-b", branch_name, target_dir]) unless Dir.exists? target_dir
 
     puts target_dir
   end
