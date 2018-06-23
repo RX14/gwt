@@ -1,1 +1,5 @@
 language: crystal
+
+script:
+  - make all
+  - crystal tool format --check
