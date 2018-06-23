@@ -16,7 +16,7 @@ module GWT
       base_path, url = other_args
 
       clone(base_path, url, clone_args)
-    when "branch"
+    when "branch", "b"
       raise "unknown args, expected branch name" unless args.size == 1
 
       branch(args.first)
@@ -24,7 +24,7 @@ module GWT
       raise "unknown args, expected feature branch name" unless args.size == 1
 
       branch("feature/#{args.first}")
-    when "bugfix"
+    when "bugfix", "bug"
       raise "unknown args, expected bugfix branch name" unless args.size == 1
 
       branch("bugfix/#{args.first}")
