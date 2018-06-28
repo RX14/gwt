@@ -30,6 +30,22 @@ module GWT
       branch("bugfix/#{args.first}")
     when "ls"
       ls
+    when "on"
+      raise "unknown args, expected branch qualifier and name" unless args.size >= 2
+      branch_qualifier, branch_name = args.shift(2)
+
+      case branch_qualifier
+      when "branch", "b"
+        # do nothing
+      when "feature", "f"
+        branch_name = "feature/#{branch_name}"
+      when "bugfix", "bug"
+        branch_name = "bugfix/#{branch_name}"
+      end
+
+      commandline = args
+
+      on(branch_name, commandline)
     else
       raise "subcommands: clone, branch, feature, bugfix"
     end
@@ -69,6 +85,16 @@ module GWT
     command_output("git", ["worktree", "list"]).each_line do |line|
       STDERR.puts line.lchop(root_dir)
     end
+  end
+
+  def self.on(branch_name, commandline)
+    branch_dir = "#{root_dir}/#{branch_name}"
+
+    command = commandline.shift
+    args = commandline
+
+    status = command(command, args, chdir: branch_dir, allow_failure: true)
+    exit status.exit_code
   end
 
   def self.root_dir : String
