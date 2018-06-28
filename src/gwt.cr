@@ -20,7 +20,7 @@ module GWT
       raise "unknown args, expected branch name" unless args.size == 1
 
       branch(args.first)
-    when "feature"
+    when "feature", "f"
       raise "unknown args, expected feature branch name" unless args.size == 1
 
       branch("feature/#{args.first}")
