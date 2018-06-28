@@ -28,6 +28,8 @@ module GWT
       raise "unknown args, expected bugfix branch name" unless args.size == 1
 
       branch("bugfix/#{args.first}")
+    when "ls"
+      ls
     else
       raise "subcommands: clone, branch, feature, bugfix"
     end
@@ -58,6 +60,15 @@ module GWT
     command("git", ["worktree", "add", "-b", branch_name, target_dir]) unless Dir.exists? target_dir
 
     puts target_dir
+  end
+
+  def self.ls
+    command("git", ["worktree", "prune"])
+
+    root_dir = self.root_dir + "/"
+    command_output("git", ["worktree", "list"]).each_line do |line|
+      STDERR.puts line.lchop(root_dir)
+    end
   end
 
   def self.root_dir : String
