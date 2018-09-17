@@ -1,4 +1,7 @@
 require "colorize"
+require "uri"
+require "http"
+require "json"
 
 module GWT
   VERSION = "0.1.0"
@@ -28,6 +31,10 @@ module GWT
       raise "unknown args, expected bugfix branch name" unless args.size == 1
 
       branch("bugfix/#{args.first}")
+    when "pr"
+      raise "unknown args, expected PR url" unless args.size == 1
+
+      pr(args.first)
     when "ls"
       ls
     when "on"
@@ -47,7 +54,7 @@ module GWT
 
       on(branch_name, commandline)
     else
-      raise "subcommands: clone, branch, feature, bugfix"
+      raise "subcommands: clone, branch, feature, bugfix, pr, ls, on"
     end
   rescue ex : GWT::Error
     STDERR << "Error".colorize.red << ": #{ex.message}\n"
@@ -70,7 +77,7 @@ module GWT
     File.touch("#{base_path}/.gwt-root")
   end
 
-  def self.branch(branch_name)
+  def self.branch(branch_name) : Nil
     target_dir = "#{root_dir}/#{branch_name}"
 
     command("git", ["worktree", "add", "-b", branch_name, target_dir]) unless Dir.exists? target_dir
@@ -95,6 +102,72 @@ module GWT
 
     status = command(command, args, chdir: branch_dir, allow_failure: true)
     exit status.exit_code
+  end
+
+  def self.pr(pull_request_url)
+    path = URI.parse(pull_request_url).path
+    raise "no path on PR URL!" unless path
+
+    path_parts = path.lchop('/').split('/')
+    raise "couldn't parse PR path: expected 4 parts" unless path_parts.size >= 4
+    user, repo, issue_type, issue_number = path_parts
+    raise "couldn't parse PR path: expected PR" unless issue_type == "pull"
+
+    issue_number = issue_number.to_i?
+    raise "couldn't parse PR path: PR number was not numeric" unless issue_number
+
+    headers = HTTP::Headers{"Accept" => "application/vnd.github.v3+json", "User-Agent" => "RX14/gwt #{VERSION} (language Crystal)"}
+    response = HTTP::Client.get("https://api.github.com/repos/#{user}/#{repo}/pulls/#{issue_number}", headers: headers)
+
+    content_type = response.content_type || ""
+    raise "invalid content type #{content_type}" unless content_type.includes? "application/json"
+    json = JSON.parse(response.body)
+
+    raise "got #{response.status_code}: #{json["message"]}" unless response.success?
+
+    author = json["user"]["login"].as_s
+    title = slug(json["title"].as_s)
+    branch_name = "pr/#{author}/#{issue_number}-#{title}"
+
+    source_repo = json["head"]["repo"]
+    source_repo_username = source_repo["owner"]["login"].as_s.downcase
+    source_repo_clone_url = source_repo["clone_url"].as_s
+
+    add_remote(source_repo_username, source_repo_clone_url)
+
+    branch_dir = "#{root_dir}/#{branch_name}"
+    branch_dir_exists = Dir.exists? branch_dir
+
+    branch(branch_name)
+
+    unless branch_dir_exists
+      remote_ref = "#{source_repo_username}/#{json["head"]["ref"]}"
+      command("git", ["fetch", source_repo_username], chdir: branch_dir)
+      command("git", ["branch", "--set-upstream-to", remote_ref], chdir: branch_dir)
+      command("git", ["reset", "--hard", remote_ref], chdir: branch_dir)
+    end
+  end
+
+  def self.slug(string)
+    string.gsub { |c| c.in_set?("A-Za-z0-9") ? c.downcase : '-' }.squeeze('-')
+  end
+
+  def self.add_remote(name : String, url : String)
+    remote_list = command_output("git", ["remote", "-v"])
+    remote_exists = false
+    remote_list.each_line do |line|
+      parts = line.split('\t')
+      raise "unrecognised remote format" unless parts.size == 2
+      remote_name, remote_url_base = parts
+
+      remote_exists = true if remote_name == name
+    end
+
+    if remote_exists
+      command("git", ["remote", "set-url", name, url])
+    else
+      command("git", ["remote", "add", name, url])
+    end
   end
 
   def self.root_dir : String
