@@ -13,10 +13,15 @@ module GWT
     when "clone"
       clone_args, other_args = args.partition { |arg| arg.starts_with? '-' }
 
-      unless other_args.size == 2
-        raise "unknown args, expected path and URL"
+      case other_args.size
+      when 2
+        url, base_path = other_args
+      when 1
+        url = other_args.first
+        base_path = Path.posix(URI.parse(url).path).basename
+      else
+        raise "unknown args, expected URL, with optional path"
       end
-      base_path, url = other_args
 
       clone(base_path, url, clone_args)
     when "branch", "b"
