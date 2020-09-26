@@ -67,7 +67,7 @@ module GWT
   end
 
   def self.clone(base_path, url, clone_args)
-    clone_dir = "#{base_path}/master"
+    clone_dir = "#{base_path}/main"
 
     git_args = ["clone"]
     git_args += clone_args
