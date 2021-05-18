@@ -85,9 +85,24 @@ module GWT
   def self.branch(branch_name) : Nil
     target_dir = "#{root_dir}/#{branch_name}"
 
-    command("git", ["worktree", "add", "-b", branch_name, target_dir]) unless Dir.exists? target_dir
+    unless Dir.exists?(target_dir)
+      command("git", ["worktree", "add", "-b", branch_name, target_dir])
+      copy_files(target_dir)
+    end
 
     puts target_dir
+  end
+
+  def self.copy_files(target_dir)
+    return unless File.exists?("#{root_dir}/.gwt-copy")
+
+    copied_files = File.read_lines("#{root_dir}/.gwt-copy")
+
+    source_dir = Path.new(command_output("git", ["rev-parse", "--show-toplevel"]))
+
+    copied_files.each do |filename|
+      File.copy(source_dir/filename, "#{target_dir}/#{filename}")
+    end
   end
 
   def self.ls
