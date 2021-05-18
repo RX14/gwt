@@ -31,11 +31,11 @@ module GWT
     when "feature", "f"
       raise "unknown args, expected feature branch name" unless args.size == 1
 
-      branch("feature/#{args.first}")
+      branch("#{branch_prefix}feature/#{args.first}")
     when "bugfix", "bug"
       raise "unknown args, expected bugfix branch name" unless args.size == 1
 
-      branch("bugfix/#{args.first}")
+      branch("#{branch_prefix}bugfix/#{args.first}")
     when "pr"
       raise "unknown args, expected PR url" unless args.size == 1
 
@@ -50,9 +50,9 @@ module GWT
       when "branch", "b"
         # do nothing
       when "feature", "f"
-        branch_name = "feature/#{branch_name}"
+        branch_name = "#{branch_prefix}feature/#{branch_name}"
       when "bugfix", "bug"
-        branch_name = "bugfix/#{branch_name}"
+        branch_name = "#{branch_prefix}bugfix/#{branch_name}"
       end
 
       commandline = args
@@ -187,6 +187,14 @@ module GWT
       command("git", ["remote", "set-url", name, url])
     else
       command("git", ["remote", "add", name, url])
+    end
+  end
+
+  def self.branch_prefix : String
+    if File.exists?("#{root_dir}/.gwt-prefix")
+      File.read("#{root_dir}/.gwt-prefix").chomp
+    else
+      ""
     end
   end
 
